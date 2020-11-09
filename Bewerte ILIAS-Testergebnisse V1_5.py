@@ -340,48 +340,14 @@ def eval_ilias_single(gleichung_ilias, v, r):
 
 def eval_ilias_batch(gleichungen, variablen, res):
     # Für den Fall, dass eine Unteraufgabe eine Lösung aus einer späteren Unteraufgabe benötigt,
-    # werden
-    k = 0
-    while k < anz_res + 1:
+    # werden mit der Batch Funktion die Lösungen mehrfach ausprobiert
+    for _ in range(anz_res + 1):
         for id, gleichung_ilias in enumerate(gleichungen):
             if not res[id] is None or gleichung_ilias == " ":
                 continue
-
-            anz_var = len(variablen)  # Anzahl der möglichen variable $v1, $v2 usw. in der ILIAS-Formel
-            # Gleichung für Python-Format anpassen:
-            gleichung_py = gleichung_ilias.lower()
-            # Variablenbezeichnung umändern:
-            for i in reversed(range(1, anz_var + 1)):
-                var_ilias = "$v" + str(i)
-                var_py = "v[" + str(i - 1) + "]"
-                gleichung_py = gleichung_py.replace(var_ilias, var_py)
-            for j in reversed(range(1, anz_var + 1)):
-                res_ilias = "$r" + str(j)
-                res_py = "r[" + str(j - 1) + "]"
-                gleichung_py = gleichung_py.replace(res_ilias, res_py)
-            # Mathematische Funktionen anpassen:
-            gleichung_py = gleichung_py.replace("^", "**")
-            gleichung_py = gleichung_py.replace("arcsin", "asin")
-            gleichung_py = gleichung_py.replace("arcsinh", "asinh")
-            gleichung_py = gleichung_py.replace("arccos", "acos")
-            gleichung_py = gleichung_py.replace("arccosh", "acosh")
-            gleichung_py = gleichung_py.replace("arctan", "atan")
-            gleichung_py = gleichung_py.replace("arctanh", "atanh")
-            gleichung_py = gleichung_py.replace("ln", "log")
-            gleichung_py = gleichung_py.replace("log", "log10")
-
-            # Gleichung checken und berechnen
-            try:  # Testet, ob ein Fehler auftritt
-                result = eval(gleichung_py)
-            except:  # Wenn ein Fehler auftritt, Fehlermeldung
-                result = None
-                print("Gleichung ", gleichung_ilias, " enthält einen Fehler:")
-                print("Python-Format:", gleichung_py)
-                print("Variablen:", variablen)
-                print("Ergebnisse:", res)
-            r[id] = result
-        k += 1
-    return r
+            result = eval_ilias_single(gleichung_ilias, variablen, res)
+            res[id] = result
+    return res
 
 
 ########################################################################
@@ -571,90 +537,6 @@ for std_id, std_aufgaben in enumerate(fragen_id):
             pkt[std_id][afg_id] = fragen_punkte_student
     ges_pkt[std_id] = ges_punkte
     noten[std_id] = notenberechnung(ges_punkte, max_pkt, schema_proz, schema_note)
-
-
-"""
-for teilnehmer in range(0,anz_teilnehmer):
-    # print ("Nr.",teilnehmer,namen[teilnehmer],":")
-    ges_punkte = 0
-    for frage in range(0,anz_fragen):
-#        print("Teiln.",teilnehmer,"frage:",frage,"ID:",fragen_id[teilnehmer][frage])
-#        print("Variablen:",var[teilnehmer][frage])
-#        print("Stud.res.:",res[teilnehmer][frage])
-
-        # print("")
-        fragen_punkte_student = 0
-        # print ("Teiln.",teilnehmer,", frage",frage,",",fragen_id[teilnehmer][frage])
-        # Index der frage im Fragenpool finden
-        i = finde_fragenindex(fragen_id[teilnehmer][frage], fragen_id_pool)
-        Musterlösung = [None for _ in range(anz_res)]
-        for res_range in range(anz_res):
-
-            print(fragen_id_pool[i])
-
-            if i==None: #Falls frage nicht im Pool gefunden wird
-                r = -999999
-                Formel = "Formel Nicht gefunden"
-                toleranz = None
-                print("!!! Teiln.",teilnehmer,", frage",frage,",",fragen_id[teilnehmer][frage]," existiert nicht im Pool!")
-            else:
-                # print ("Fragenindex i =",i)
-                # Passende Formel usw. aus dem Fragenpool auslesen
-                # Derzeit wird nur Ergebnis 1 ausgewertet
-                Formel = gleichungen_pool[res_range][i]
-                toleranz = toleranzen_pool[res_range][i]
-                punkte = punkte_pool[res_range][i]
-                if Formel == " " or Formel is np.nan:
-                    continue
-                # Formel mit den Variablen des Studenten anwenden:
-                v = var[teilnehmer][frage]
-
-                # Ergebnisse der Studierenden für Folgefehler-Berechnung auskommentieren
-                # r = res[teilnehmer][frage]
-                if v[0] == None: # Wenn der Student die Aufgabe gar nicht angeschaut hat, sind alle Variablen None, insbesondere die erste.
-                    r = None
-                else:  # Der Student hat wenigstens die frage angeschaut und Werte bekommen
-                    r = eval_ilias_single(Formel, v, Musterlösung)
-                    if r is None:
-                        apa = {"T": toleranz}
-                    Musterlösung[res_range] = r
-                    # print ("Formel =",Formel,"=",r,"toleranz:",toleranz,"%")
-                    # print ("Typ von r = ",type(r))
-
-                    # Maximale und minimale Grenze mit toleranz bestimmen.
-                    # ACHTUNG: Bei negativem Vorzeichen drehen sich min und max rum,
-                    # das gibt dann Ärger beim nachfolgenden Vergleich
-                    # Daher hier die Verwendung von "min" und "max"
-                    r_min = min(r*(1+toleranz/100), r*(1-toleranz/100))
-                    r_max = max(r*(1+toleranz/100), r*(1-toleranz/100))
-                    # print("Min =",r_min,", Max =",r_max)
-
-                    # Ergebnis des Studierenden:
-                    r_student = res[teilnehmer][frage][res_range]  # Es wird in dieser version nur ein Ergebnis, das erste, ausgewertet
-                    # print("Stud. Ergebnis: Teiln.",teilnehmer,"frage:",frage,"R_stud =",r_student)
-
-                    # Ist das Ergebnis vorhanden und innerhalb der toleranz?
-                    # Dann gibt's die punkte für die Aufgabe, sonst 0 pkt.
-                    if r_student != None: #Wenn der Student keine Lösung angegeben hat ist r_student = None
-                        # Dann kann es noch sein, dass die Lösung als Bruch, z.B. 1/300 angegebn ist.
-                        # Dann muss der Bruch mit eval ausgerechnet werden
-                        if type(r_student)==str:
-                            r_student = eval(r_student)
-                        if (r_student >= r_min) and (r_student <= r_max):
-                            fragen_punkte_student += punkte
-                            ges_punkte = ges_punkte + punkte
-                            # print("punkte =",Punkte_Student)
-                
-        # Jetzt noch die Ergebnisse in den Listen abspeichern:
-        # print ("frage",frage,",",fragen_id[teilnehmer][frage],"pkt =",fragen_punkte_student)
-        fragen_formel[teilnehmer][frage] = Formel
-        fragen_tol[teilnehmer][frage] = toleranz
-        res_ref[teilnehmer][frage][0] = r
-        pkt[teilnehmer][frage][0] = fragen_punkte_student
-    ges_pkt[teilnehmer] = ges_punkte
-    noten[teilnehmer] = notenberechnung (ges_punkte, max_pkt, schema_proz, schema_note)
-    print ("Nr.",nr_teilnehmer[teilnehmer],namen[teilnehmer],", Ges.pkt =",ges_pkt[teilnehmer],", Note =",noten[teilnehmer])
-"""
 print("Anzahl Teilnehmer = ", anz_teilnehmer)
 
 ########################################################################
@@ -698,7 +580,7 @@ for frage in range(anz_fragen):
 df_ex[''] = [""] * anz_teilnehmer  # Leerspalte an dieser Stelle einfügen
 
 # Details zu den einzelnen Fragen 
-for frage in range (anz_fragen):
+for frage in range(anz_fragen):
     spaltentitel = f"A" + str(frage + 1) + f"_ID"
     x = [""] * anz_teilnehmer  # Spaltendaten initialisieren
     for teilnehmer in range(anz_teilnehmer):
