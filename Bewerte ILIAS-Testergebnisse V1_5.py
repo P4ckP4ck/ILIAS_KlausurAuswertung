@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Vers.1.5, 4.9.2020, Eberhard Waffenschmidt, TH-Köln
+weitergeführt von Patrick Lehnen, TH-Köln
 
 Tool zum Einlesen und Weiterverarbeiten von ILIAS Testergebnissen.
 Liest die Ergebnisse eines ILIAS-Formelfragentest aus einer EXCEL-Tabelle ein.
